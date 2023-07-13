@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat App</title>
+</head>
+<body>
+
+    <h1>Group Name : {{groupname}}</h1>
+
+    <textarea  id="chat-log" cols="100" rows="20">
+        {% for chat in chats %}
+            {{chat.content}}
+        {% endfor %}
+    </textarea><br>
+    
+    
+    <input type="text" id="chat-message-input" size="100"><br>
+    <input type="button" value="Send" id="chat-message-submit">
+    {{groupname | json_script:"group-name"}} 
+    <!-- can now access group name inside script -->
+
+     <script>
+        const groupName= JSON.parse(document.getElementById('group-name').textContent)// string to javascript object (while receiving data from server)
+        console.log(groupName)
+        //now we have to send request to consumer.py from frontend
+        //creating websocket object
+        // var ws = new WebSocket('ws://localhost:8000/ws/ac/')
+        var ws= new WebSocket(
+            'ws://' 
+            + window.location.host 
+            + '/ws/ac/' 
+            + groupName
+            +'/' 
+        )
+        //when connection will open
+        ws.onopen = function(){
+            console.log('websocket open')
+            // ws.send('hi, msg from the client')
+        }
+        //whenever server will send message to the client this will execute
+        ws.onmessage = function(event){
+            console.log('message received from server',event.data)
+            const data= JSON.parse(event.data) // string to object
+            console.log(data)
+            document.querySelector('#chat-log').value += (data.msg+'\n')
+            //to display message received from server to frontend
+            //document.getElementById("ct").innerHTML += event.data + "<br>"
+
+        }
+
+        ws.onerror = function(event){
+            console.log('websocket error occured',event)
+        }
+        ws.onclose = function(event){
+            console.log('websocket connection closed',event)
+        }
+
+        document.getElementById('chat-message-submit').onclick =function(event){
+            const messageInputDom=document.getElementById('chat-message-input')
+            const message=messageInputDom.value
+            ws.send(JSON.stringify({  //object to string because sending to server
+                'msg':message
+            }))
+            messageInputDom.value=''
+            //object to string
+        }
+    </script>
+</body>
+</html>
